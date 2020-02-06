@@ -1,6 +1,7 @@
 #include <ArduinoMqttClient.h>
 #include <WiFi101.h> // for MKR1000 change to: #include <WiFi101.h>
 
+//definiranje pinova
 #define vibro A1
 #define Led11 4
 #define Led12 3
