@@ -17,10 +17,10 @@
 
 char ssid[] = "MW40V_2384";      //  your WiFi network SSID (name)
 char pass[] = "04598995";       // your WiFi network key
-
+//protokoli pomocu kojih se spajamo na server.
 WiFiClient wifiClient;
-MqttClient mqttClient(wifiClient);
-
+MqttClient mqttClient(wifiClient);   
+//informacije o tome na koji se server spajamo,koji je port servera,..., i definiranje varijabli.
 const char broker[] = "test.mosquitto.org";
 int        port     = 1883;
 const char topic[]  = "sszc";
@@ -42,6 +42,7 @@ bool poslano = false;
 void setup() {
   //Initialize serial and wait for port to open:
   Serial.begin(9600);
+  //Postavljamo ledice da budu output device i pozivamo funkciju iskljuci kako bi nam sve ledice bile ugasene napocetku.
   pinMode(Led11, OUTPUT);
   pinMode(Led12, OUTPUT);
   pinMode(Led13, OUTPUT);
@@ -59,7 +60,7 @@ void setup() {
   Serial.print("Spajanje na WiFi:  ");
   Serial.println(ssid);
   while (WiFi.begin(ssid, pass) != WL_CONNECTED) {
-    // ako nije uspjelo čeka 5 sekundi i pokušavam opet
+    // ako nije uspjelo čeka 5 sekundi i pokušavamo opet
     delay(5000);
   }
 
@@ -83,24 +84,31 @@ void setup() {
 
 void loop() {
   // MQTT keep alive funkcija poll() sprječava prekid veze s MQTT brokerom
+  
+  //provjeravamo dali se senzor za vibraciju zatresao i postavljamo rezultat nula da nam pretvara poruke koje dobiva od senzora u poruke koje se mogu koristiti u kodu.
+  
+  
   mqttClient.poll();
   slusaj();
   start = analogRead(vibro);
   if (start > 100) {
     rezultat1 = akcija();
     switch (rezultat1) {
+        // u slucaju da je dobije 1 poziva funkciju koja pali ledice koje oznacavaju kamen.
       case 0:
         Serial.println("Kamen");
         poruka = "1";
         rezultat0 = 1;
         kamen();
         break;
+        //u slucaju da je dobije 2 poziva funkciju koja pali ledice koje oznacavaju skare.
       case 1:
         Serial.println("Škare");
         poruka = "22";
         rezultat0 = 2;
         skare();
         break;
+        //u slucaju da je dobije 3 poziva funkciju koja pali ledice koje oznacavaju papir.
       case 2:
         Serial.println("Papir");
         poruka = "333";
@@ -108,8 +116,10 @@ void loop() {
         papir();
         break;
     }
+    //salje svoj dobiveni integer na server i poziva funkciju razmisljaj koja pali i gasi odredene ledica kako se nebi desilo da u krivo vrijeme igraci tresu senzore.
     posalji();
     razmisljaj();
+    //ispisuje i poziva funkciju za usporedivanje rezultat0 i rezultat1
     Serial.println(rezultat0);
     Serial.println(rezultat2);
     usporedi(rezultat0, rezultat2);
@@ -119,7 +129,7 @@ void loop() {
   }
 
 }
-
+ //kreiranje funkcije usporedi (logika igre).
 void usporedi(int player1, int player2) {
   if (player1 == player2) {
     Serial.println("Nerješeno");
@@ -134,7 +144,7 @@ void usporedi(int player1, int player2) {
     gubitak();
   }
 }
-
+//kreiranje funkcije slusaj koja provjerava dali je dosla poruka sa servera i govori nam kolika je velicina poruke,njen topic i koliko ima bajtova.
 void slusaj() {
   messageSize = mqttClient.parseMessage();
   if (messageSize) {
@@ -148,7 +158,7 @@ void slusaj() {
     rezultat2 = messageSize;;
   }
 }
-
+//kreiranje funkcije posalji koja salje poruku na server do drugog igraca i govori nam njen topic i koja je poruka.
 void posalji() {
   mqttClient.beginMessage(topic);
   mqttClient.print(poruka);
@@ -161,7 +171,7 @@ void posalji() {
   Serial.println();
   poslano = true;
 }
-
+//kreiranje funkcije za paljenje i gasenje ledica 5 puta kako igraci nebi u to vrijeme tresli senzor.
 void razmisljaj() {
   for (int i = 0; i < 5; i++) {
     slusaj();
@@ -190,7 +200,7 @@ void razmisljaj() {
     digitalWrite(Led33, LOW);
   }
 }
-
+//kreiranje funkcije koja pali ledice za skare.
 void skare() {
   digitalWrite(Led11, HIGH);
   digitalWrite(Led13, HIGH);
@@ -204,6 +214,7 @@ void skare() {
 
 
 }
+//kreiranje funkcije koja pali ledice za papir.
 void papir() {
   digitalWrite(Led11, HIGH);
   digitalWrite(Led13, HIGH);
@@ -216,6 +227,7 @@ void papir() {
   digitalWrite(Led32, HIGH);
 
 }
+//kreiranje funkcije koja pali ledice za kamen.
 void kamen() {
   digitalWrite(Led11, LOW);
   digitalWrite(Led13, LOW);
@@ -228,12 +240,12 @@ void kamen() {
   digitalWrite(Led32, HIGH);
 
 }
-
+//kreiranje funkcije za paljenje ledice koja oznacava pobjedu.
 void pobjeda() {
   digitalWrite(LedPobjeda, HIGH);
   digitalWrite(LedGubitak, LOW);
 }
-
+//kreiranje funkcije za paljenje ledica koje oznacavaju nerjeseno.
 void nerjeseno() {
   for (int i = 0; i < 5; i++) {
     digitalWrite(LedPobjeda, HIGH);
@@ -247,12 +259,14 @@ void nerjeseno() {
 
 
 }
+//kreiranje funkcije za paljenje ledice koja oznacava gubitak.
 void gubitak() {
   digitalWrite(LedPobjeda, LOW);
   digitalWrite(LedGubitak, HIGH);
 
 
 }
+//kreiranje funkcije za gasenje svih ledica da nebi ostale upaljene.
 void iskljuci() {
   digitalWrite(Led11, LOW);
   digitalWrite(Led13, LOW);
@@ -266,7 +280,7 @@ void iskljuci() {
   digitalWrite(LedPobjeda, LOW);
   digitalWrite(LedGubitak, LOW);
 }
-
+// kreiranje funkcije koja resetira igru kako bi opet mogli igrati.
 void resetiranje() {
   Serial.println("Reset");
   iskljuci();
@@ -285,7 +299,7 @@ void resetiranje() {
 
 }
 
-
+// kreiranje funkcije koja vraca random integer od 1 do 3.
 int akcija() {
   int akcija = random(3);
   return akcija;
